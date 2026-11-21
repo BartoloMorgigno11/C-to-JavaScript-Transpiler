@@ -1,0 +1,77 @@
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyd
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+.pyre/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node (if present)
+node_modules/
+
+# C/C++ build artifacts
+*.o
+*.obj
+*.out
+*.exe
+*.a
+*.so
+*.dll
+*.dylib
+*.lo
+*.la
+*.lai
+*.mod
+*.gcno
+*.gcda
+*.gcov
+
+# Flex/Bison generated files
+parser.tab.c
+parser.tab.h
+lex.yy.c
+y.tab.c
+y.tab.h
+
+# Logs
+*.log
+
+# Environment/Secrets
+.env
+.env.*
+*.env
+
+# Project-specific generated artifacts
+transpiler/build/
+transpiler/Front-end/ast.json
+transpiler/Front-end/Parser/parser.tab.c
+transpiler/Front-end/Parser/parser.tab.h
+transpiler/Front-end/Scanner/lex.yy.c
+transpiler/output/
+tests/results/

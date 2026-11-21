@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+  <title>Transpiler C &rarr; JavaScript</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <header>
+  <h1>Transpiler C &rarr; JavaScript</h1>
+  <p>Compila il parser, transpila codice C ed esegui i test di regressione direttamente dal browser.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>1. Setup del transpiler</h2>
+        <p>Assicurati che il front-end Flex/Bison sia disponibile per la tua piattaforma.</p>
+        <div class="actions">
+          <button id="build-btn" type="button">Compila / Verifica Parser</button>
+          <label class="inline">
+            <input type="checkbox" id="force-rebuild" />
+            Ricompila forzatamente (rigenera flex/bison)
+          </label>
+        </div>
+        <pre id="build-log" class="log" aria-live="polite"></pre>
+      </section>
+
+      <section class="card">
+        <h2>2. Transpila sorgente</h2>
+        <textarea id="source" placeholder="Incolla qui il tuo codice C…" spellcheck="false"></textarea>
+        <div class="actions">
+          <button id="load-file-btn" type="button">Carica file sorgente</button>
+          <button id="transpile-btn" type="button">Genera JavaScript</button>
+          <span id="transpile-status" class="status" aria-live="polite"></span>
+        </div>
+        <input id="file-input" type="file" accept=".c,.h,text/plain" hidden />
+        <div class="output-grid">
+          <div class="output">
+            <h3>JavaScript</h3>
+            <textarea id="js-output" readonly spellcheck="false" aria-label="JavaScript generato"></textarea>
+          </div>
+          <div class="output">
+            <h3>AST (JSON)</h3>
+            <textarea id="ast-output" readonly spellcheck="false" aria-label="AST generato in JSON"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>3. Suite di test</h2>
+        <p>Esegui i test automatici (cartelle `tests/ok` e `tests/error`).</p>
+        <div class="actions">
+          <button id="tests-btn" type="button">Esegui Test</button>
+          <span id="tests-status" class="status" aria-live="polite"></span>
+        </div>
+        <div id="tests-results" class="tests-grid"></div>
+      </section>
+    </main>
+
+    <footer>
+      <small>Transpiler C &rarr; JavaScript — Interfaccia Web</small>
+    </footer>
+
+    <script src="{{ url_for('static', filename='app.js') }}" type="module"></script>
+  </body>
+</html>
+
