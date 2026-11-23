@@ -31,7 +31,7 @@ DataType current_expression_type = TYPE_UNKNOWN;
 %token WHILE IF ELSE INT FLOAT CHAR VOID RETURN
 %token SOMMA DIFFERENZA MOLTIPLICAZIONE DIVISIONE
 %token MAGGIORE MINORE MAGGIORE_UGUALE MINORE_UGUALE UGUALE DIVERSO COMA
-%token PRINT SCANF
+%token PRINT SCANF LEXICAL_ERROR
 
 %type <ast_node> program statement_list statement espressione costruttii
 %type <ast_node> assegnazione definizione output input chiamata_funzione
@@ -1568,6 +1568,7 @@ void yyerror(const char *s) {
 
 int main() {
     int result = yyparse();
+    int ast_write_failed = 0;
     
     if (result == 0 && ast_root != NULL) {
         FILE *json_file = fopen("ast.json", "w");
@@ -1577,6 +1578,7 @@ int main() {
             printf("AST generato in ast.json\n");
         } else {
             fprintf(stderr, "Errore: impossibile creare il file ast.json\n");
+            ast_write_failed = 1;
         }
     }
     
@@ -1596,10 +1598,10 @@ int main() {
     
     free_ast(ast_root);
     
-    if (result == 0) {
+    if (result == 0 && !ast_write_failed) {
         printf("[OK] Parsing completato\n");
     } else {
         printf("[ERROR] Si è verificato un errore durante el parsing\n");
     }
-    return result;
+    return result == 0 ? ast_write_failed : result;
 }

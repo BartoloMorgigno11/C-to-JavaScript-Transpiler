@@ -1,0 +1,41 @@
+name: transpiler-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install compiler tools and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flex bison build-essential
+          python -m pip install -r requirements.txt
+      - name: Build front-end and report grammar conflicts
+        run: |
+          bison -Wcounterexamples -v -d -o /tmp/parser.tab.c transpiler/Front-end/Parser/parser.y 2>&1 | tee /tmp/bison.log
+          python scripts/build_transpiler.py --force
+      - name: Preserve Bison diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bison-diagnostics
+          path: |
+            /tmp/bison.log
+            /tmp/parser.output
+          if-no-files-found: warn
+      - name: Run Python unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Run parser, AST, and JavaScript regression suite
+        run: python scripts/run_tests.py --rebuild

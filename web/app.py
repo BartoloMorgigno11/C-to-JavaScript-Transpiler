@@ -6,6 +6,8 @@ Interfaccia web Flask per il transpiler da C a JavaScript.
 from __future__ import annotations
 
 import sys
+import tempfile
+import threading
 import traceback
 from pathlib import Path
 
@@ -37,6 +39,7 @@ ALLOWED_FILE_ROOTS = (
     RESULTS_OK_DIR,
     RESULTS_ERR_DIR,
 )
+PIPELINE_LOCK = threading.Lock()
 
 app = Flask(
     __name__,
@@ -85,11 +88,12 @@ def build_parser_endpoint():
     data = request.get_json(silent=True) or {}
     force = bool(data.get("force", False))
     try:
-        target = build_parser(
-            force=force,
-            skip_generation=not force,
-            output_path=DEFAULT_BINARY_PATH,
-        )
+        with PIPELINE_LOCK:
+            target = build_parser(
+                force=force,
+                skip_generation=not force,
+                output_path=DEFAULT_BINARY_PATH,
+            )
     except BuildError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
     return jsonify({"ok": True, "parser": str(target.relative_to(ROOT))})
@@ -104,39 +108,35 @@ def transpile_endpoint():
         return jsonify({"ok": False, "error": "Fornire un sorgente C non vuoto."}), 400
 
     _ensure_directories()
-    source_path = INPUT_DIR / "input.c"
-    output_path = OUTPUT_DIR / "output.js"
-
     try:
-        source_path.write_text(source_code, encoding="utf-8")
-    except OSError as exc:
-        return jsonify({"ok": False, "error": f"Impossibile scrivere il sorgente: {exc}"}), 500
-
-    try:
-        result = compile_to_js(
-            source_path,
-            output_path,
-            parser_path=None,
-            keep_ast=True,
-            rebuild_parser=False,
-        )
+        with tempfile.TemporaryDirectory(prefix="c-to-js-") as temp_dir:
+            workspace = Path(temp_dir)
+            source_path = workspace / "input.c"
+            output_path = workspace / "output.js"
+            source_path.write_text(source_code, encoding="utf-8")
+            result = compile_to_js(
+                source_path,
+                output_path,
+                parser_path=None,
+                keep_ast=True,
+                rebuild_parser=False,
+            )
+            js_code = result.read_text(encoding="utf-8")
+            ast_path = result.with_suffix(".ast.json")
+            ast_code = ast_path.read_text(encoding="utf-8") if ast_path.exists() else ""
     except (PipelineError, FileNotFoundError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
     except Exception as exc:  # pragma: no cover
         traceback.print_exc()
         return jsonify({"ok": False, "error": f"Errore imprevisto: {exc}"}), 500
 
-    js_code = result.read_text(encoding="utf-8")
-    ast_path = result.with_suffix(".ast.json")
-    ast_code = ast_path.read_text(encoding="utf-8") if ast_path.exists() else ""
-
     return jsonify(
         {
             "ok": True,
             "js": js_code,
-            "js_path": str(result.relative_to(ROOT)),
+            "js_path": "",
             "ast": ast_code,
-            "ast_path": str(ast_path.relative_to(ROOT)) if ast_code else "",
+            "ast_path": "",
         }
     )
 
@@ -145,13 +145,14 @@ def transpile_endpoint():
 def run_tests_endpoint():
     _ensure_directories()
     try:
-        parser_binary = build_parser(
-            force=False,
-            skip_generation=True,
-            output_path=DEFAULT_BINARY_PATH,
-        )
-        ok_cases = regression.run_ok_tests(parser_binary)
-        err_cases = regression.run_error_tests(parser_binary)
+        with PIPELINE_LOCK:
+            parser_binary = build_parser(
+                force=False,
+                skip_generation=True,
+                output_path=DEFAULT_BINARY_PATH,
+            )
+            ok_cases = regression.run_ok_tests(parser_binary)
+            err_cases = regression.run_error_tests(parser_binary)
         all_cases = ok_cases + err_cases
         overall_success = all(case.passed for case in all_cases)
 

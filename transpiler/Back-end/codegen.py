@@ -21,6 +21,7 @@ class CToJSTranspiler:
         self.indent_size = 2
         self.output_lines = []
         self.declared_variables = set()
+        self.variable_types = {}
         self.function_declarations = {}
         self.current_function_name = None
         self.last_printf_message = ""  # Memorizza l'ultimo messaggio di printf per i prompt di scanf
@@ -169,7 +170,7 @@ class CToJSTranspiler:
         elif node_type == "compare":
             return self.transpile_comparison(node)
         else:
-            return f""
+            raise ValueError(f"Unsupported AST node type: {node_type or '<missing>'}")
     
     def transpile_program(self, node: Dict[str, Any]) -> str:
         """Traduce il nodo radice del programma"""
@@ -268,6 +269,7 @@ class CToJSTranspiler:
         initial_value = node.get("initial_value")
         
         self.declared_variables.add(var_name)
+        self.variable_types[var_name] = data_type
         
         if initial_value:
             init_val = self.transpile_node(initial_value)
@@ -440,9 +442,28 @@ class CToJSTranspiler:
         
         left_str = self.transpile_node(left)
         right_str = self.transpile_node(right)
+        if operator == "/" and self._is_integer_expression(left) and self._is_integer_expression(right):
+            # C99 integer division truncates toward zero; JavaScript '/' does not.
+            return f"Math.trunc(({left_str}) / ({right_str}))"
+
         js_op = self.convert_operator(operator)
         
         return f"({left_str} {js_op} {right_str})"
+
+    def _is_integer_expression(self, node: Dict[str, Any]) -> bool:
+        """Return whether the supported AST proves an expression has C int semantics."""
+        node_type = node.get("node_type")
+        if node_type == "literal":
+            return node.get("literal_type") == "integer"
+        if node_type == "identifier":
+            return self.variable_types.get(node.get("identifier_name")) == "int"
+        if node_type == "binary_operation":
+            return (
+                node.get("operator") in {"+", "-", "*", "/"}
+                and self._is_integer_expression(node.get("left_operand", {}))
+                and self._is_integer_expression(node.get("right_operand", {}))
+            )
+        return False
     
     def transpile_literal(self, node: Dict[str, Any]) -> str:
         """Traduce un valore letterale"""

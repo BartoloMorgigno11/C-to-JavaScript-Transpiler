@@ -42,14 +42,14 @@ def _ensure_directories(*extra: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def _run_parser(parser_binary: Path, source_path: Path, destination: Path) -> None:
+def _run_parser(parser_binary: Path, source_path: Path, work_dir: Path) -> Path:
     try:
         result = subprocess.run(
             [str(parser_binary)],
             input=source_path.read_text(encoding="utf-8"),
             text=True,
             capture_output=True,
-            cwd=FRONTEND_DIR,
+            cwd=work_dir,
             check=False,
         )
     except OSError as exc:
@@ -61,10 +61,10 @@ def _run_parser(parser_binary: Path, source_path: Path, destination: Path) -> No
         detail = stderr or stdout or "il parser è terminato senza diagnostica"
         raise PipelineError(f"Errore del parser: {detail}")
 
-    generated_ast = FRONTEND_DIR / "ast.json"
+    generated_ast = work_dir / "ast.json"
     if not generated_ast.exists():
         raise PipelineError("Il parser non ha generato ast.json")
-    shutil.copyfile(generated_ast, destination)
+    return generated_ast
 
 
 def _load_codegen():
@@ -101,12 +101,14 @@ def compile_to_js(
         raise PipelineError(str(exc)) from exc
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        ast_temp = Path(tmpdir) / "ast.json"
-        _run_parser(parser_binary, source, ast_temp)
+        ast_temp = _run_parser(parser_binary, source, Path(tmpdir))
         if keep_ast:
             backup_ast = output.with_suffix(".ast.json")
             shutil.copyfile(ast_temp, backup_ast)
-        codegen.transpile_ast_file(ast_temp, output)
+        try:
+            codegen.transpile_ast_file(ast_temp, output)
+        except (OSError, ValueError) as exc:
+            raise PipelineError(f"Generazione JavaScript fallita: {exc}") from exc
 
     return output
 
