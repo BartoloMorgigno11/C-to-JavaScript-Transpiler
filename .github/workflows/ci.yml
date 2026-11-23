@@ -24,7 +24,8 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Build front-end and report grammar conflicts
         run: |
-          bison -Wcounterexamples -v -d -o /tmp/parser.tab.c transpiler/Front-end/Parser/parser.y 2>&1 | tee /tmp/bison.log
+          bison -Wconflicts-sr -Wconflicts-rr -v -d -o /tmp/parser.tab.c transpiler/Front-end/Parser/parser.y 2>&1 | tee /tmp/bison.log
+          grep -E '[0-9]+ shift/reduce conflicts|[0-9]+ reduce/reduce conflicts' /tmp/bison.log || true
           python scripts/build_transpiler.py --force
       - name: Preserve Bison diagnostics
         if: always()
