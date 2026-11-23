@@ -4,6 +4,14 @@ An experimental compiler pipeline that translates a defined subset of C into Jav
 
 > This is an educational compiler project, not a full ISO C implementation. It accepts only the language constructs covered by its grammar and semantic rules.
 
+## Web interface
+
+<p align="center">
+  <img src="docs/images/web-transpiler-demo.png" alt="Local Flask interface showing a successful C-to-JavaScript transpilation and generated AST" width="560" />
+</p>
+
+The local interface compiles the parser, transpiles a supported C program, and exposes both the generated JavaScript and the AST used by the Python backend.
+
 ## Highlights
 
 - Scanner built with Flex and parser built with Bison.
