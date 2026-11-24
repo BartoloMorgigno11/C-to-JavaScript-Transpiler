@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.c_to_js import compile_to_js
+from scripts.build_transpiler import DEFAULT_BINARY_PATH
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CODEGEN_PATH = ROOT / "transpiler" / "Back-end" / "codegen.py"
@@ -155,6 +158,30 @@ class CodegenTests(unittest.TestCase):
         self.assertIn("return Math.trunc((x) / (2));", javascript)
         self.assertIn("function float(x)", javascript)
         self.assertIn("return (x / 2);", javascript)
+
+    def test_integer_division_matches_compiled_c_for_a_supported_program(self) -> None:
+        if not (shutil.which("gcc") and shutil.which("node") and DEFAULT_BINARY_PATH.exists()):
+            self.skipTest("requires gcc, node, and the CI-built parser")
+        source_text = """#include <stdio.h>
+int main() {
+    int a = 5;
+    int b = 2;
+    int result = a / b;
+    printf("%d\\n", result);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            source = workspace / "division.c"
+            c_binary = workspace / "division-c"
+            javascript = workspace / "division.js"
+            source.write_text(source_text, encoding="utf-8")
+            subprocess.run(["gcc", str(source), "-o", str(c_binary)], check=True)
+            c_output = subprocess.run([str(c_binary)], check=True, capture_output=True, text=True).stdout
+            compile_to_js(source, javascript, parser_path=DEFAULT_BINARY_PATH, keep_ast=True)
+            js_output = subprocess.run(["node", str(javascript)], check=True, capture_output=True, text=True).stdout
+        self.assertEqual(js_output, c_output)
 
 
 if __name__ == "__main__":
