@@ -20,7 +20,7 @@ jobs:
       - name: Install compiler tools and Python dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y flex bison build-essential
+          sudo apt-get install -y flex libfl-dev bison build-essential
           python -m pip install -r requirements.txt
       - name: Build front-end and report grammar conflicts
         run: |
