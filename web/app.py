@@ -109,21 +109,22 @@ def transpile_endpoint():
 
     _ensure_directories()
     try:
-        with tempfile.TemporaryDirectory(prefix="c-to-js-") as temp_dir:
-            workspace = Path(temp_dir)
-            source_path = workspace / "input.c"
-            output_path = workspace / "output.js"
-            source_path.write_text(source_code, encoding="utf-8")
-            result = compile_to_js(
-                source_path,
-                output_path,
-                parser_path=None,
-                keep_ast=True,
-                rebuild_parser=False,
-            )
-            js_code = result.read_text(encoding="utf-8")
-            ast_path = result.with_suffix(".ast.json")
-            ast_code = ast_path.read_text(encoding="utf-8") if ast_path.exists() else ""
+        with PIPELINE_LOCK:
+            with tempfile.TemporaryDirectory(prefix="c-to-js-") as temp_dir:
+                workspace = Path(temp_dir)
+                source_path = workspace / "input.c"
+                output_path = workspace / "output.js"
+                source_path.write_text(source_code, encoding="utf-8")
+                result = compile_to_js(
+                    source_path,
+                    output_path,
+                    parser_path=None,
+                    keep_ast=True,
+                    rebuild_parser=False,
+                )
+                js_code = result.read_text(encoding="utf-8")
+                ast_path = result.with_suffix(".ast.json")
+                ast_code = ast_path.read_text(encoding="utf-8") if ast_path.exists() else ""
     except (PipelineError, FileNotFoundError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
     except Exception as exc:  # pragma: no cover

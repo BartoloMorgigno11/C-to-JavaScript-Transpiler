@@ -130,7 +130,8 @@ def build_parser(
     ):
         return target
 
-    _ensure_grammar_sources(skip_generation=skip_generation)
+    generated_sources_missing = not BISON_C.exists() or not BISON_H.exists() or not FLEX_C.exists()
+    _ensure_grammar_sources(skip_generation=skip_generation and not generated_sources_missing)
     compiler = _select_compiler()
     _compile(compiler, target)
     return target

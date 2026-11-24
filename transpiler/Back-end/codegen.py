@@ -225,10 +225,16 @@ class CToJSTranspiler:
         # Salva l'output corrente e il livello di indentazione
         old_output = self.output_lines
         old_indent = self.indent_level
+        old_variable_types = self.variable_types
         
         # Crea un buffer temporaneo per il corpo
         self.output_lines = []
         self.indent_level = 0  # Parte da indentazione 0, che verrà aggiunta in seguito
+        self.variable_types = old_variable_types.copy()
+        if parameters and "children" in parameters:
+            for parameter in parameters["children"]:
+                if parameter.get("node_type") == "variable_declaration":
+                    self.variable_types[parameter.get("variable_name", "")] = parameter.get("data_type")
         
         # Imposta il nome della funzione corrente ed elabora il corpo
         prev_function = self.current_function_name
@@ -244,6 +250,7 @@ class CToJSTranspiler:
         body_lines = self.output_lines
         self.output_lines = old_output
         self.indent_level = old_indent
+        self.variable_types = old_variable_types
         
         # Scrive la firma della funzione
         self.add_line(f"function {func_name}({params_str}) {{")

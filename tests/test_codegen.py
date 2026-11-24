@@ -81,6 +81,81 @@ class CodegenTests(unittest.TestCase):
         }
         self.assertEqual(transpiler.transpile_binary_operation(expression), "(5.0 / 2)")
 
+    def test_function_parameters_and_local_ints_use_integer_division(self) -> None:
+        ast = {
+            "ast": {
+                "node_type": "program",
+                "children": [
+                    {
+                        "node_type": "function_declaration",
+                        "function_name": "divide",
+                        "parameters": {
+                            "children": [
+                                {"node_type": "variable_declaration", "variable_name": "a", "data_type": "int"},
+                                {"node_type": "variable_declaration", "variable_name": "b", "data_type": "int"},
+                            ]
+                        },
+                        "body": {
+                            "node_type": "block",
+                            "children": [
+                                {
+                                    "node_type": "variable_declaration",
+                                    "variable_name": "local_value",
+                                    "data_type": "int",
+                                    "initial_value": {
+                                        "node_type": "binary_operation",
+                                        "operator": "/",
+                                        "left_operand": {"node_type": "identifier", "identifier_name": "a"},
+                                        "right_operand": {"node_type": "identifier", "identifier_name": "b"},
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        }
+        self.assertIn("Math.trunc((a) / (b))", codegen.transpile_ast(ast))
+
+    def test_negative_integer_division_truncates_toward_zero_in_node(self) -> None:
+        if not shutil.which("node"):
+            self.skipTest("Node.js is not available")
+        result = subprocess.run(
+            ["node", "--eval", "console.log(Math.trunc(-5 / 2))"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "-2")
+
+    def test_parameter_types_do_not_leak_between_functions(self) -> None:
+        function = lambda name, data_type: {
+            "node_type": "function_declaration",
+            "function_name": name,
+            "parameters": {"children": [{"node_type": "variable_declaration", "variable_name": "x", "data_type": data_type}]},
+            "body": {
+                "node_type": "block",
+                "children": [
+                    {
+                        "node_type": "return",
+                        "return_value": {
+                            "node_type": "binary_operation",
+                            "operator": "/",
+                            "left_operand": {"node_type": "identifier", "identifier_name": "x"},
+                            "right_operand": {"node_type": "literal", "literal_type": "integer", "value": 2},
+                        },
+                    }
+                ],
+            },
+        }
+        javascript = codegen.transpile_ast(
+            {"ast": {"node_type": "program", "children": [function("integer", "int"), function("float", "float")]}}
+        )
+        self.assertIn("function integer(x)", javascript)
+        self.assertIn("return Math.trunc((x) / (2));", javascript)
+        self.assertIn("function float(x)", javascript)
+        self.assertIn("return (x / 2);", javascript)
+
 
 if __name__ == "__main__":
     unittest.main()
