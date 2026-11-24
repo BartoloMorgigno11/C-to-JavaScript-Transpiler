@@ -331,6 +331,10 @@ class CToJSTranspiler:
         
         # Elabora la stringa di formato
         clean_format, placeholders = self.process_format_string(format_str)
+        # console.log terminates the line itself; retaining a final C newline would
+        # produce an observable extra blank line in both Node and browser consoles.
+        if clean_format.endswith("\n"):
+            clean_format = clean_format[:-1]
         
         # Salva il messaggio per un eventuale utilizzo nella scanf successiva
         prompt_memory = clean_format.replace('${}', '').replace('\n', ' ').replace('\t', ' ').strip()
