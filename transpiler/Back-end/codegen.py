@@ -21,6 +21,7 @@ class CToJSTranspiler:
         self.indent_size = 2
         self.output_lines = []
         self.declared_variables = set()
+        self.variable_types = {}
         self.function_declarations = {}
         self.current_function_name = None
         self.last_printf_message = ""  # Memorizza l'ultimo messaggio di printf per i prompt di scanf
@@ -169,7 +170,7 @@ class CToJSTranspiler:
         elif node_type == "compare":
             return self.transpile_comparison(node)
         else:
-            return f""
+            raise ValueError(f"Unsupported AST node type: {node_type or '<missing>'}")
     
     def transpile_program(self, node: Dict[str, Any]) -> str:
         """Traduce il nodo radice del programma"""
@@ -224,10 +225,16 @@ class CToJSTranspiler:
         # Salva l'output corrente e il livello di indentazione
         old_output = self.output_lines
         old_indent = self.indent_level
+        old_variable_types = self.variable_types
         
         # Crea un buffer temporaneo per il corpo
         self.output_lines = []
         self.indent_level = 0  # Parte da indentazione 0, che verrà aggiunta in seguito
+        self.variable_types = old_variable_types.copy()
+        if parameters and "children" in parameters:
+            for parameter in parameters["children"]:
+                if parameter.get("node_type") == "variable_declaration":
+                    self.variable_types[parameter.get("variable_name", "")] = parameter.get("data_type")
         
         # Imposta il nome della funzione corrente ed elabora il corpo
         prev_function = self.current_function_name
@@ -243,6 +250,7 @@ class CToJSTranspiler:
         body_lines = self.output_lines
         self.output_lines = old_output
         self.indent_level = old_indent
+        self.variable_types = old_variable_types
         
         # Scrive la firma della funzione
         self.add_line(f"function {func_name}({params_str}) {{")
@@ -268,6 +276,7 @@ class CToJSTranspiler:
         initial_value = node.get("initial_value")
         
         self.declared_variables.add(var_name)
+        self.variable_types[var_name] = data_type
         
         if initial_value:
             init_val = self.transpile_node(initial_value)
@@ -322,6 +331,10 @@ class CToJSTranspiler:
         
         # Elabora la stringa di formato
         clean_format, placeholders = self.process_format_string(format_str)
+        # console.log terminates the line itself; retaining a final C newline would
+        # produce an observable extra blank line in both Node and browser consoles.
+        if clean_format.endswith("\n"):
+            clean_format = clean_format[:-1]
         
         # Salva il messaggio per un eventuale utilizzo nella scanf successiva
         prompt_memory = clean_format.replace('${}', '').replace('\n', ' ').replace('\t', ' ').strip()
@@ -440,9 +453,28 @@ class CToJSTranspiler:
         
         left_str = self.transpile_node(left)
         right_str = self.transpile_node(right)
+        if operator == "/" and self._is_integer_expression(left) and self._is_integer_expression(right):
+            # C99 integer division truncates toward zero; JavaScript '/' does not.
+            return f"Math.trunc(({left_str}) / ({right_str}))"
+
         js_op = self.convert_operator(operator)
         
         return f"({left_str} {js_op} {right_str})"
+
+    def _is_integer_expression(self, node: Dict[str, Any]) -> bool:
+        """Return whether the supported AST proves an expression has C int semantics."""
+        node_type = node.get("node_type")
+        if node_type == "literal":
+            return node.get("literal_type") == "integer"
+        if node_type == "identifier":
+            return self.variable_types.get(node.get("identifier_name")) == "int"
+        if node_type == "binary_operation":
+            return (
+                node.get("operator") in {"+", "-", "*", "/"}
+                and self._is_integer_expression(node.get("left_operand", {}))
+                and self._is_integer_expression(node.get("right_operand", {}))
+            )
+        return False
     
     def transpile_literal(self, node: Dict[str, Any]) -> str:
         """Traduce un valore letterale"""

@@ -31,6 +31,15 @@ SOURCE_FILES = [
     "Scanner/lex.yy.c",
 ]
 
+BUILD_INPUTS = [
+    BISON_SOURCE,
+    FLEX_SOURCE,
+    *[FRONTEND_DIR / source for source in SOURCE_FILES[1:]],
+    FRONTEND_DIR / "Parser" / "ast.h",
+    FRONTEND_DIR / "Parser" / "symbol_table.h",
+    FRONTEND_DIR / "Parser" / "type_checking.h",
+]
+
 
 class BuildError(RuntimeError):
     """Errore sollevato quando il processo di build fallisce."""
@@ -115,10 +124,14 @@ def build_parser(
     output_path: Path | None = None,
 ) -> Path:
     target = (output_path or DEFAULT_BINARY_PATH).resolve()
-    if not force and target.exists():
+    if not force and target.exists() and all(
+        source.exists() and source.stat().st_mtime <= target.stat().st_mtime
+        for source in BUILD_INPUTS
+    ):
         return target
 
-    _ensure_grammar_sources(skip_generation=skip_generation)
+    generated_sources_missing = not BISON_C.exists() or not BISON_H.exists() or not FLEX_C.exists()
+    _ensure_grammar_sources(skip_generation=skip_generation and not generated_sources_missing)
     compiler = _select_compiler()
     _compile(compiler, target)
     return target

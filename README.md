@@ -82,8 +82,11 @@ C source
 ## Scope and limitations
 
 - The project deliberately supports a subset of C, not the full standard library or all ISO C syntax.
-- Bison currently reports shift/reduce and reduce/reduce conflicts while generating the grammar. The documented regression suite passes, but unsupported or ambiguous syntax should be treated as out of scope.
-- The tests validate parsing, diagnostic behavior, AST generation, and JavaScript emission; they do not prove semantic equivalence for every C program.
+- Supported constructs are scalar `int`, `float`, and `char` declarations/assignments, arithmetic/comparisons, functions, `if`/`else`, `while`, `return`, and the documented `printf`/`scanf` subset. Arrays, pointers other than `scanf` addresses, preprocessing semantics, compound operators, and the ISO C library are excluded.
+- Unsupported characters are lexical errors; unsupported AST nodes fail code generation instead of being silently omitted.
+- JavaScript uses IEEE-754 numbers. When both operands are known `int` expressions in the supported AST, `/` emits `Math.trunc(left / right)` to preserve C99 truncation toward zero; floating or mixed division emits JavaScript `/`. Division by zero remains undefined/out of scope, as in C.
+- `scanf` maps to browser `prompt`, so it is demonstrative browser I/O rather than portable command-line C I/O.
+- The tests validate parsing, diagnostics, AST generation, and JavaScript emission for the supported subset; they do not prove semantic equivalence for arbitrary C programs.
 
 ## Additional setup notes
 

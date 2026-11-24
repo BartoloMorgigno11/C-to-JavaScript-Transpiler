@@ -1,3 +1,5 @@
+%option yylineno
+
 %{
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
@@ -142,7 +144,10 @@ static int process_char_literal(const char *text) {
 
 [ \t\n]                 ;
 
-.         ;
+.         {
+              fprintf(stderr, "Errore lessicale alla riga %d: carattere non supportato '%s'\n", yylineno, yytext);
+              return LEXICAL_ERROR;
+          }
 
 %%
 
