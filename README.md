@@ -1,5 +1,7 @@
 # C to JavaScript Transpiler
 
+[![Transpiler regression tests](https://github.com/BartoloMorgigno11/C-to-JavaScript-Transpiler/actions/workflows/ci.yml/badge.svg)](https://github.com/BartoloMorgigno11/C-to-JavaScript-Transpiler/actions/workflows/ci.yml)
+
 An experimental compiler pipeline that translates a defined subset of C into JavaScript. The project combines a Flex scanner, Bison parser, C-based AST and semantic checks, Python code generation, regression tests, and a local Flask interface.
 
 > This is an educational compiler project, not a full ISO C implementation. It accepts only the language constructs covered by its grammar and semantic rules.
@@ -61,7 +63,7 @@ This creates the JavaScript output and, with `--keep-ast`, an adjacent JSON repr
 python web/app.py
 ```
 
-Open `http://127.0.0.1:5000`. The interface remains local-only and can build the parser, transpile pasted C code, display generated JavaScript/AST, and show regression-test artefacts.
+Open `http://127.0.0.1:5000`. Use only trusted local source files: this educational C parser is not hardened for untrusted input or public deployment. The interface remains local-only and can build the parser, transpile pasted C code, display generated JavaScript/AST, and show regression-test artefacts.
 
 ## Architecture
 
