@@ -6,7 +6,7 @@ An experimental compiler pipeline that translates a defined subset of C into Jav
 
 > This is an educational compiler project, not a full ISO C implementation. It accepts only the language constructs covered by its grammar and semantic rules.
 
-**Project authorship:** Collaborative project by Bartolo Morgigno and Vito Marzocca.
+**Project authorship:** Collaborative project by Bartolo Morgigno and Vito Marzocca. Development responsibilities were shared equally among team members, without a formal division of components.
 
 ## Web interface
 
